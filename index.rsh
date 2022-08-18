@@ -5,15 +5,18 @@ const [isOutcome, B_WINS, A_WINS] = makeEnum(2);
 
 // const winner = (handAlice, handBob) => (handAlice + (4 - handBob)) % 3;
 const solu = (handAlice, firstNumber, secondNumber, thirdNumber) => {
-  
-  if(handAlice == firstNumber || handAlice == secondNumber || handAlice == thirdNumber) {
+  if (
+    handAlice == firstNumber ||
+    handAlice == secondNumber ||
+    handAlice == thirdNumber
+  ) {
     // outcome = A_WINS;
     return 0;
   } else {
     // outcome = B_WINS;
     return 1;
   }
-}
+};
 // assert(winner(ROCK, PAPER) == B_WINS);
 // assert(winner(PAPER, ROCK) == A_WINS);
 // assert(winner(ROCK, ROCK) == LOSE);
@@ -34,34 +37,42 @@ const Player = {
 export const main = Reach.App(() => {
   const Alice = Participant("Alice", {
     ...Player,
-    // wager: UInt, // atomic units of currency
+    wager: UInt, // atomic units of currency
     // deadline: UInt, // time delta (blocks/rounds)
   });
   const Bob = Participant("Bob", {
     ...Player,
-    // acceptWager: Fun([UInt], Null),
+    acceptWager: Fun([UInt], Null),
   });
   init();
 
   Alice.only(() => {
+    const wager = declassify(interact.wager);
     const handAlice = declassify(interact.getNumber());
   });
-  Alice.publish(handAlice);
+  Alice.publish(wager, handAlice).pay(wager);
   commit();
 
   Bob.only(() => {
+    interact.acceptWager(wager);
     const firstNumber = declassify(interact.getNumber());
     const secondNumber = declassify(interact.getNumber());
     const ThirdNumber = declassify(interact.getNumber());
   });
-  
+
   Bob.publish(firstNumber);
   commit();
   Bob.publish(secondNumber);
   commit();
-  Bob.publish(ThirdNumber);
-  
+  Bob.publish(ThirdNumber).pay(wager);
+
   const outcome = solu(handAlice, firstNumber, secondNumber, ThirdNumber);
+
+  const [forAlice, forBob] =
+    outcome == 1 ? [2, 0] :
+    /* alice    */ [0, 2];
+  transfer(forAlice * wager).to(Alice);
+  transfer(forBob * wager).to(Bob);
 
   commit();
 
