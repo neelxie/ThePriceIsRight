@@ -1,38 +1,73 @@
 "reach 0.1";
 
 // const [isHand, ROCK, PAPER, SCISSORS] = makeEnum(3);
-const [isOutcome, B_WINS, LOSE, A_WINS] = makeEnum(3);
+const [isOutcome, B_WINS, A_WINS] = makeEnum(2);
 
-const winner = (handAlice, handBob) => (handAlice + (4 - handBob)) % 3;
-
+// const winner = (handAlice, handBob) => (handAlice + (4 - handBob)) % 3;
+const solu = (handAlice, firstNumber, secondNumber, thirdNumber) => {
+  
+  if(handAlice == firstNumber || handAlice == secondNumber || handAlice == thirdNumber) {
+    // outcome = A_WINS;
+    return 0;
+  } else {
+    // outcome = B_WINS;
+    return 1;
+  }
+}
 // assert(winner(ROCK, PAPER) == B_WINS);
 // assert(winner(PAPER, ROCK) == A_WINS);
 // assert(winner(ROCK, ROCK) == LOSE);
 
-forall(UInt, (handAlice) =>
-  forall(UInt, (handBob) => assert(isOutcome(winner(handAlice, handBob))))
-);
+// forall(UInt, (handAlice) =>
+//   forall(UInt, (handBob) => assert(isOutcome(winner(handAlice, handBob))))
+// );
 
-forall(UInt, (hand) => assert(winner(hand, hand) == LOSE));
+// forall(UInt, (hand) => assert(winner(hand, hand) == LOSE));
 
 const Player = {
-  ...hasRandom,
-  getHand: Fun([], UInt),
+  // ...hasRandom,
+  getNumber: Fun([], UInt),
   seeOutcome: Fun([UInt], Null),
-  informTimeout: Fun([], Null),
+  // informTimeout: Fun([], Null),
 };
 
 export const main = Reach.App(() => {
   const Alice = Participant("Alice", {
     ...Player,
-    wager: UInt, // atomic units of currency
-    deadline: UInt, // time delta (blocks/rounds)
+    // wager: UInt, // atomic units of currency
+    // deadline: UInt, // time delta (blocks/rounds)
   });
   const Bob = Participant("Bob", {
     ...Player,
-    acceptWager: Fun([UInt], Null),
+    // acceptWager: Fun([UInt], Null),
   });
   init();
+
+  Alice.only(() => {
+    const handAlice = declassify(interact.getNumber());
+  });
+  Alice.publish(handAlice);
+  commit();
+
+  Bob.only(() => {
+    const firstNumber = declassify(interact.getNumber());
+    const secondNumber = declassify(interact.getNumber());
+    const ThirdNumber = declassify(interact.getNumber());
+  });
+  
+  Bob.publish(firstNumber);
+  commit();
+  Bob.publish(secondNumber);
+  commit();
+  Bob.publish(ThirdNumber);
+  
+  const outcome = solu(handAlice, firstNumber, secondNumber, ThirdNumber);
+
+  commit();
+
+  each([Alice, Bob], () => {
+    interact.seeOutcome(outcome);
+  });
 
   // const informTimeout = () => {
   //   each([Alice, Bob], () => {
@@ -60,7 +95,7 @@ export const main = Reach.App(() => {
   //   commit();
 
   //   Alice.only(() => {
-  //     const _handAlice = interact.getHand();
+  //     const _handAlice = interact.getNumber();
   //     const [_commitAlice, _saltAlice] = makeCommitment(interact, _handAlice);
   //     const commitAlice = declassify(_commitAlice);
   //   });
@@ -71,7 +106,7 @@ export const main = Reach.App(() => {
 
   //   unknowable(Bob, Alice(_handAlice, _saltAlice));
   //   Bob.only(() => {
-  //     const handBob = declassify(interact.getHand());
+  //     const handBob = declassify(interact.getNumber());
   //   });
   //   Bob.publish(handBob).timeout(relativeTime(deadline), () =>
   //     closeTo(Alice, informTimeout)
